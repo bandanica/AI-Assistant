@@ -13,3 +13,9 @@ A practical project exploring Generative AI and Agentic AI concepts through the 
 - Build a functional assistant powered by a **Generative AI model**
 - Learn how to combine LLMs with planning and decision-making
 - Set the foundation for more complex, multi-agent systems
+
+## TO-DO
+
+1. Add ReAct pattern to WhatToWear assistant.
+2. Add function calling and tool for getting weather conditions in the input city.
+3. Improve WhatToWear assistant with previous two steps.

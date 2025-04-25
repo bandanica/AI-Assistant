@@ -1,24 +1,43 @@
 import requests
 from openai import OpenAI
+from dataclasses import dataclass
+from typing import Optional
+import os 
 
-class WhatToWearAssistant:
-    def __init__(self, model="llama3.2", base_url="http://localhost:11434/v1/"):
-        self.client = OpenAI(api_key="ollama", base_url=base_url)
-        self.model = model
+@dataclass
+class WeatherInfo:
+    city: str
+    temperature: float
+    condition: str
+    wind: float
+    humidity: Optional[float] = None
 
-    def get_coordinates(self, city: str) -> tuple:
+    def to_prompt(self) -> str:
+        humidity_str = f"{self.humidity}%" if self.humidity is not None else "unknown"
+        return (
+            f"The current weather in {self.city} is {self.condition}, "
+            f"{self.temperature}°C with wind speed {self.wind} km/h. "
+            f"Humidity is {humidity_str}.\n\n"
+            "Based on this weather, what should I wear today? Provide a brief and practical outfit recommendation."
+        )
+    
+class WeatherService:
+    @staticmethod
+    def get_coordinates(city: str) -> tuple:
         url = f"https://nominatim.openstreetmap.org/search?q={city}&format=json&limit=1"
         response = requests.get(url, headers={"User-Agent": "weather-assistant"})
+        response.raise_for_status()
         data = response.json()
-        
+
         if not data:
-            raise ValueError("City not found.")
-        
+            raise ValueError(f"City '{city}' not found.")
+
         lat = float(data[0]['lat'])
         lon = float(data[0]['lon'])
         return lat, lon
-    
-    def interpret_weather_code(self, code: int) -> str:
+
+    @staticmethod
+    def interpret_weather_code(code: int) -> str:
         weather_map = {
             0: "Clear sky",
             1: "Mainly clear",
@@ -40,50 +59,40 @@ class WhatToWearAssistant:
         }
         return weather_map.get(code, "Unknown")
 
-    def get_weather_info(self, city: str) -> dict:
-        lat, lon = self.get_coordinates(city)
-
-        weather_url = (
-            f"https://api.open-meteo.com/v1/forecast?"
-            f"latitude={lat}&longitude={lon}&current_weather=true"
-        )
-
-        response = requests.get(weather_url)
+    @classmethod
+    def get_weather_info(cls, city: str) -> WeatherInfo:
+        lat, lon = cls.get_coordinates(city)
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+        response = requests.get(url)
+        response.raise_for_status()
         data = response.json()
 
         current = data["current_weather"]
-
-        return {
-            "city": city,
-            "temperature": current["temperature"],
-            "condition": self.interpret_weather_code(current["weathercode"]),
-            "wind": current["windspeed"],
-            "humidity": None 
-        }
-
-    def build_prompt(self, weather_data: dict) -> str:
-        """
-        Build the user prompt for the LLM based on the current weather data.
-        """
-        return (
-            f"The current weather in {weather_data['city']} is {weather_data['condition']}, "
-            f"{weather_data['temperature']}°C with wind speed {weather_data['wind']} km/h. "
-            f"Humidity is {weather_data['humidity']}%.\n\n"
-            "Based on this weather, what should I wear today? Provide a brief and practical outfit recommendation."
+        return WeatherInfo(
+            city=city,
+            temperature=current["temperature"],
+            condition=cls.interpret_weather_code(current["weathercode"]),
+            wind=current["windspeed"]
         )
 
+class WhatToWearAssistant:
+    def __init__(self, model="llama3.2", base_url="http://localhost:11434/v1/"):
+        api_key = os.getenv("OLLAMA_API_KEY", "ollama")
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.model = model
+
     def get_outfit_recommendation(self, city: str) -> str:
-        """
-        Main function to get a clothing recommendation based on city weather.
-        """
-        weather = self.get_weather_info(city)
-        user_prompt = self.build_prompt(weather)
+        weather = WeatherService.get_weather_info(city)
+        prompt = weather.to_prompt()
 
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that recommends appropriate clothing based on weather."},
-                {"role": "user", "content": user_prompt}
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that recommends appropriate clothing based on weather."
+                },
+                {"role": "user", "content": prompt}
             ],
             stream=False
         )

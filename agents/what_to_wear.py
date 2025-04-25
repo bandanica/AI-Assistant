@@ -77,7 +77,7 @@ class WeatherService:
 
 class WhatToWearAssistant:
     def __init__(self, model="llama3.2", base_url="http://localhost:11434/v1/"):
-        api_key = os.getenv("OLLAMA_API_KEY", "ollama")
+        api_key = "ollama"
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
 

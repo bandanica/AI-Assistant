@@ -16,6 +16,6 @@ A practical project exploring Generative AI and Agentic AI concepts through the 
 
 ## TO-DO
 
-1. Add ReAct pattern to WhatToWear assistant.
-2. Add function calling and tool for getting weather conditions in the input city.
-3. Improve WhatToWear assistant with previous two steps.
+1. Add ReAct pattern to WhatToWear assistant
+2. Explore and include LangGraph and LangChain
+3. LangGraph and AutoGen comparison

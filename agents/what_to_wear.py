@@ -6,17 +6,59 @@ class WhatToWearAssistant:
         self.client = OpenAI(api_key="ollama", base_url=base_url)
         self.model = model
 
+    def get_coordinates(self, city: str) -> tuple:
+        url = f"https://nominatim.openstreetmap.org/search?q={city}&format=json&limit=1"
+        response = requests.get(url, headers={"User-Agent": "weather-assistant"})
+        data = response.json()
+        
+        if not data:
+            raise ValueError("City not found.")
+        
+        lat = float(data[0]['lat'])
+        lon = float(data[0]['lon'])
+        return lat, lon
+    
+    def interpret_weather_code(self, code: int) -> str:
+        weather_map = {
+            0: "Clear sky",
+            1: "Mainly clear",
+            2: "Partly cloudy",
+            3: "Overcast",
+            45: "Fog",
+            48: "Depositing rime fog",
+            51: "Light drizzle",
+            53: "Moderate drizzle",
+            55: "Dense drizzle",
+            61: "Slight rain",
+            63: "Moderate rain",
+            65: "Heavy rain",
+            71: "Slight snow",
+            73: "Moderate snow",
+            75: "Heavy snow",
+            95: "Thunderstorm",
+            99: "Thunderstorm with hail"
+        }
+        return weather_map.get(code, "Unknown")
+
     def get_weather_info(self, city: str) -> dict:
-        """
-        Fetch weather data for a given city.
-        Currently hardcoded.
-        """
+        lat, lon = self.get_coordinates(city)
+
+        weather_url = (
+            f"https://api.open-meteo.com/v1/forecast?"
+            f"latitude={lat}&longitude={lon}&current_weather=true"
+        )
+
+        response = requests.get(weather_url)
+        data = response.json()
+
+        current = data["current_weather"]
+
         return {
             "city": city,
-            "temperature": 20,     # in Celsius
-            "condition": "Cloudy",
-            "wind": 6,             # in km/h
-            "humidity": 60         # in percent
+            "temperature": current["temperature"],
+            "condition": self.interpret_weather_code(current["weathercode"]),
+            "wind": current["windspeed"],
+            "humidity": None 
         }
 
     def build_prompt(self, weather_data: dict) -> str:

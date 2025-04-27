@@ -19,3 +19,6 @@ A practical project exploring Generative AI and Agentic AI concepts through the 
 1. Add ReAct pattern to WhatToWear assistant
 2. Explore and include LangGraph and LangChain
 3. LangGraph and AutoGen comparison
+4. Explore RetryOutputParser
+5. Fitness Assistant
+6. AI News and Research Assistant

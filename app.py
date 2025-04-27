@@ -1,7 +1,7 @@
 import streamlit as st
 
 from experiments.fitness_assistant import LocalFitnessAssistant
-from agents.what_to_wear import WhatToWearAssistant
+from agents.what_to_wear import create_what_to_wear_agent
 
 def main():
     st.set_page_config(page_title="AI Multi-Assistant", page_icon="🤖", layout="wide")
@@ -21,7 +21,6 @@ def main():
             "activity level, and previous workouts."
         )
 
-       
         user_input = st.text_area(
             "Enter workout preferences:",
             height=200,
@@ -43,15 +42,23 @@ def main():
             "This assistant will suggest an outfit based on the current weather in your city."
         )
 
-        
-        city = st.text_input("Enter your city:", placeholder="Enter city name (e.g., New York)")
+        city = st.text_input("Enter your city:", placeholder="Enter city name (e.g., Rijeka)")
 
         if st.button("Get Outfit Recommendation"):
             if city:
-                assistant = WhatToWearAssistant() 
-                outfit_suggestion = assistant.get_outfit_recommendation(city)
-                st.write("### Outfit Suggestion")
-                st.write(outfit_suggestion)
+                agent = create_what_to_wear_agent()
+                outfit_suggestion = agent.run(city)
+
+                if 'ask_user' in outfit_suggestion:
+                    user_response = st.text_input(outfit_suggestion['ask_user'])
+                    
+                    if user_response:
+                        final_outfit = agent.process_user_response(user_response)
+                        st.write("### Outfit Suggestion")
+                        st.write(final_outfit)
+                else:
+                    st.write("### Outfit Suggestion")
+                    st.write(outfit_suggestion)
             else:
                 st.warning("Please enter a city name.")
 
@@ -60,7 +67,7 @@ def main():
     st.markdown(
         """
     <div style='text-align: center'>
-        <p>Made with ❤️ using Python and AI</p>
+        <p>Made using Python and Ollama</p>
     </div>
     """,
         unsafe_allow_html=True,
